@@ -2,28 +2,36 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
+import tempfile
 
-from PIL import Image
+import os
 
-import cv2
 
 import xmlrpclib
 from SimpleXMLRPCServer import SimpleXMLRPCServer
 
+import cv2
 from detector import CascadedDetector
 
 PORT = 12345
 
+# Global face detector
 detector = CascadedDetector()
 
-def detect(image, sizeX, sizeY):
+def detect(image):
     result = []
-    pil_img = Image.fromstring('RGB', size, image)
-    cv_img = cv2.cv.CreateImageHeader(size, cv2.IPL_DEPTH_8U, 3)
-    cv2.cv.SetData(cv_img, image, sizeX*3)
-    for i,r in enumerate(detector.detect(cv_img)):
+    tfile_fd, tfile_path = tempfile.mkstemp(prefix='opencv-')
+    open(tfile_path, "wb").write(image.data)
+    os.close(tfile_fd)
+    np_array = np.array(cv2.imread(tfile_path), dtype=np.uint8)
+    try:
+        os.unlink(tfile_path)
+    except:
+        print "Can't remove %s" % tfile_path
+
+    for i,r in enumerate(detector.detect(np_array)):
         x0,y0,x1,y1 = r
-        result.append("(%d, %d) - (%d, %d)" % (x0,y0,x1,y1))
+        result.append("Face %d -- (%d, %d) - (%d, %d)" % (i, x0, y0, x1, y1))
 
     return result
         
